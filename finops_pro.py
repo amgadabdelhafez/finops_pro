@@ -210,17 +210,17 @@ def handle_video_content(driver, sub_section_name):
                 url = params['response']['url']
                 if url.endswith('.m3u8'):
                     m3u8_url = url
-                    # download mp4 from m3u8 using ffmpeg
+                    # first download mp4 from m3u8 using ffmpeg
                     subprocess.run(
                         ['ffmpeg', '-i', m3u8_url, '-c', 'copy', '-bsf:a', 'aac_adtstoasc', mp4_file])
-                    transcript_mp4_to_text(mp4_file)
+                    # then transcribe text from video
+                    transcribe_mp4_to_text(mp4_file)
+                    # then extract slides from video
+                    extract_slides_from_mp4(mp4_file)
                     break
 
 # transcribe mp4 to text using open AI Whisper API
-
-
-def transcript_mp4_to_text(mp4_file):
-
+def transcribe_mp4_to_text(mp4_file):
  # convert mp4 to mp3
     mp3_file = mp4_file.replace('\\', '').replace('.mp4', '.mp3')
     subprocess.call(['ffmpeg', '-i', mp4_file.replace('\\', ''),
@@ -229,7 +229,6 @@ def transcript_mp4_to_text(mp4_file):
     openai.api_key = os.environ.get('open_ai_api')
     audio_file = open(mp3_file, "rb")
     transcript = openai.Audio.transcribe("whisper-1", audio_file)
-    print(transcript.text)
     # text only, save to file
     with open(mp3_file.replace('.mp3', '.txt'), "w", encoding="utf-8") as f:
         f.write(transcript.text)
@@ -237,11 +236,14 @@ def transcript_mp4_to_text(mp4_file):
 
     return transcript
 
+# extract slides from mp4 using slide-extractor cli tool
+def extract_slides_from_mp4(mp4_file):
+    mp4_folder = os.path.dirname(os.path.abspath(mp4_file))
+    subprocess.call(['slide-extractor', '-p', mp4_file, mp4_folder])
+    return
 
 def main():
     # initialize the driver
-    transcript_mp4_to_text(
-        '/Users/Amgad/finops_pro/content/1-Introduction\ to\ the\ FinOps\ Professional\ Course/Video_Introduction_0_hr_8_min.mp4')
     driver = initialize_driver()
 
     # do login
@@ -257,7 +259,6 @@ def main():
     browse_sections(driver, sections_list, content_dir)
 
     driver.quit()
-
 
 if __name__ == "__main__":
     main()

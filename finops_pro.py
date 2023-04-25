@@ -13,7 +13,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
-from openai_whisper import Whisper
+import openai
+from whisper import Whisper
 import openai_secret_manager
 
 # function to manage file system, we need to create a directory for the content,  and delete it if it already exists
@@ -196,23 +197,28 @@ def handle_video_content(driver, sub_section_name):
 
 def transcript_mp4_to_text(mp4_file):
    
-    assert "openai" in openai_secret_manager.get_services()
-    secrets = openai_secret_manager.get_secret("openai")
-    open_ai_api = os.environ.get('open_ai_api')
 
-    whisper = Whisper(api_key=secrets[open_ai_api])
  # convert mp4 to mp3
-    import subprocess
-    mp3_file = mp4_file.replace('.mp4', '.mp3')
-    subprocess.call(['ffmpeg', '-i', mp4_file, '-vn', '-ar', '44100', '-ac', '2', '-b:a', '192k', mp3_file])
+    mp3_file = mp4_file.replace('\\','').replace('.mp4', '.mp3')
+    # subprocess.call(['ffmpeg', '-i', mp4_file.replace('\\',''), '-vn', '-ar', '44100', '-ac', '2', '-b:a', '192k', mp3_file])
     
+    # assert "openai" in openai_secret_manager.get_services()
+    # open_ai_api = os.environ.get('open_ai_api')
+    # secrets = openai_secret_manager.get_secret('open_ai_api')
+    # whisper = Whisper(secrets[open_ai_api])
     # convert mp3 to text
-    transcript = whisper.transcribe(mp3_file)
+    # transcript = whisper.transcribe(mp3_file)
+
+    openai.api_key = os.environ.get('open_ai_api')
+    audio_file = open(mp3_file, "rb")
+    transcript = openai.Audio.transcribe("whisper-1", audio_file)
+    print(transcript.text)
     
     return transcript
 
 def main():
     # initialize the driver
+    transcript_mp4_to_text('content/1-Introduction\ to\ the\ FinOps\ Professional\ Course/Video_Introduction_0_hr_8_min.mp4')
     driver = initialize_driver()
 
     # do login

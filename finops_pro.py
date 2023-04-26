@@ -30,7 +30,7 @@ def manage_file_system(delete_existing=True):
 
     # create content dir if it does not exist
     if not os.path.isdir(content_dir):
-        os.makedirs(content_dir)
+        os.mkdir(content_dir)
         os.chdir(content_dir)
     return content_dir
 
@@ -102,6 +102,7 @@ def browse_sections(driver, sections_list, content_dir):
 def handle_section(driver, section_id, content_dir):
     try:
         section_dir = f"{section_id + 1}-{driver.find_element(By.XPATH,'/html/body/div/div[1]/div[1]/div[2]/div/div/div[1]/h1').text}"
+        section_dir = section_dir.replace(' ', '_')
         os.mkdir(section_dir)
         os.chdir(section_dir)
         # find each sub-section
@@ -129,7 +130,7 @@ def handle_sub_sections(driver, sub_section, section_path):
     sub_section.click()
     content_type = get_content_type(driver, sub_section_name)
     if content_type == 'video':
-        handle_video_content(driver, sub_section_name)
+        handle_video_content(driver, section_path, sub_section_name)
     elif content_type == 'pdf':
         handle_pdf_content(driver)
     elif content_type == 'text':
@@ -190,7 +191,7 @@ def handle_pdf_content(driver):
                 f.close()
 
 
-def handle_video_content(driver, sub_section_name):
+def handle_video_content(driver, section_path, sub_section_name):
     # Set the name of the output file
     mp4_file = f"{sub_section_name}.mp4".replace(' ', '_').replace(':', '')
 
@@ -216,7 +217,7 @@ def handle_video_content(driver, sub_section_name):
                     # then transcribe text from video
                     transcribe_mp4_to_text(mp4_file)
                     # then extract slides from video
-                    extract_slides_from_mp4(mp4_file)
+                    extract_slides_from_mp4(os.path.join(section_path, mp4_file))
                     break
 
 # transcribe mp4 to text using open AI Whisper API
@@ -229,18 +230,15 @@ def transcribe_mp4_to_text(mp4_file):
     openai.api_key = os.environ.get('open_ai_api')
     audio_file = open(mp3_file, "rb")
     transcript = openai.Audio.transcribe("whisper-1", audio_file)
-    # text only, save to file
+    # save to text, file
     with open(mp3_file.replace('.mp3', '.txt'), "w", encoding="utf-8") as f:
         f.write(transcript.text)
         f.close()
-
-    return transcript
 
 # extract slides from mp4 using slide-extractor cli tool
 def extract_slides_from_mp4(mp4_file):
     mp4_folder = os.path.dirname(os.path.abspath(mp4_file))
     subprocess.call(['slide-extractor', '-p', mp4_file, mp4_folder])
-    return
 
 def main():
     # initialize the driver
